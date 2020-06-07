@@ -8,12 +8,13 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 WiFiManager wifiManager;
 
-#define ResetPin D5
+#define ResetPin D13
 
-#define Button_1 D11
-#define Button_2 D12
-#define Relay_1 D1
-#define Relay_2 D7
+#define Button_1 D12
+#define Button_2 D11
+
+#define Relay_1 D15
+#define Relay_2 D14
 
 
 bool stt_bt1 = false;
@@ -32,81 +33,10 @@ String MAC = "";
 String topic_in = "/v1/devices/NTQ/" + MAC + "/telemetry";
 String topic_out = "/v1/devices/NTQ/" + MAC + "/request/+";
 
-StaticJsonBuffer<200> jsonBuffer;
+//StaticJsonBuffer<200> jsonBuffer;
 
-//char *MAC="";
-//char *topic_in = "/v1/device/NTQ/"+MAC+"/telemetry" ;
-//char *topic_out = "/v1/device/NTQ/"+MAC+"/request/";
-//
-String dev_key = "eNhomKou0CMJ694nK281vghbb6UtIQB2";
-//String message = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";
-String msg = "{\"sensor\":\"gps\",\"time\":1351824120}";
-
-ArduinoJWT jwt = ArduinoJWT(dev_key);
 // ==================== Check button ============================
 
-//=========================== JWT ===============================
-String DecodeJWT(String &message)
-{
-
-  // The original Message
-  Serial.println();
-  Serial.println("1) message: ");
-  Serial.println(message);
-  Serial.println();
-  // JWT - Decode a JWT and retreive the payload
-  String MsgDecode = "x";
-  for (int i = 0; i < message.length(); i++)
-    MsgDecode[i] += 'x';
-  boolean decodedToken = jwt.decodeJWT(message, MsgDecode);
-  Serial.println();
-  //jwt.decodeJWT(encodedJWT, MsgDecode);
-  Serial.println("5) MsgDecode: ");
-  Serial.println(MsgDecode);
-  return MsgDecode;
-}
-
-String EncodeJWT(String &message)
-{
-
-  // The original Message
-  Serial.println();
-  Serial.println("1) message: ");
-  Serial.println(message);
-  Serial.println();
-  //delay(1000);
-
-  // JWT - Encode a JSON Web Token
-  String encodedJWT = jwt.encodeJWT(message);
-  Serial.println("2) encodedJWT: ");
-  //Serial.println(encodedJWT);
-  //delay(1000);
-  return encodedJWT;
-  //
-  //    // Get the calculated length of a JWT
-  //    int encodedJWTLength = jwt.getJWTLength(encodedJWT);
-  //    Serial.println("3) encodedJWTLength: ");
-  //    Serial.println(encodedJWTLength);
-  //    Serial.println();
-  //    //delay(1000);
-  //
-  //    // Get the length of the decoded payload from a JWT
-  //    int encodedJWTPayloadLength = jwt.getJWTPayloadLength(encodedJWT);
-  //    Serial.println("4) encodedJWTPayloadLength: ");
-  //    Serial.println(encodedJWTPayloadLength);
-  //    //delay(1000);
-  //
-  //    // JWT - Decode a JWT and retreive the payload
-  //    String testDecoded = "x";
-  //    for (int i = 0 ; i < message.length() ; i++) testDecoded[i] += 'x';
-  //    boolean decodedToken = jwt.decodeJWT(encodedJWT, testDecoded);
-  //    Serial.println();
-  //
-  //    //jwt.decodeJWT(encodedJWT, decodedPayload);
-  //    Serial.println("5) testDecoded: ");
-  //    Serial.println(testDecoded);
-  //    delay(5000);
-}
 
 //========================= FUnction ============================
 void UpdateStt(String &topicOut)
@@ -117,52 +47,7 @@ void UpdateStt(String &topicOut)
   topicOut.toCharArray(charBuf_out, 50);
   //  client.publish(charBuf_out, msg);
 }
-bool stt_relay1_old = false;
-bool stt_relay1_new = false;
-bool stt_relay2_old = false;
-bool stt_relay2_new = false;
 
-void ControlDevice()
-{
-  stt_relay1_new = stt_bt1;
-  stt_relay2_new = stt_bt2;
-
-  if (stt_bt1 == true)
-  {
-    if (stt_relay1_new == true && stt_relay1_old == false) {
-      digitalWrite(Relay_1, HIGH);
-      Serial.println("Bat den 1");
-    }
-    //    Serial.println("Bat den 1");
-  }
-  else
-  {
-    if (stt_relay1_new == false && stt_relay1_old == true) {
-      digitalWrite(Relay_1, LOW);
-      Serial.println("Tat den 1");
-    }
-
-    //    Serial.println("Tat den 1");
-  }
-  if (stt_bt2 == true)
-  {
-    if (stt_relay2_new == true && stt_relay2_old == false) {
-      digitalWrite(Relay_2, HIGH);
-      Serial.println("Bat den 2");
-    }
-    //    Serial.println("Bat den 2");
-  }
-  else
-  {
-    if (stt_relay2_new == false && stt_relay2_old == true) {
-      digitalWrite(Relay_2, LOW);
-      Serial.println("Tat den 2");
-    }
-    //    Serial.println("Tat den 2");
-  }
-  stt_relay1_old = stt_relay1_new;
-  stt_relay2_old = stt_relay2_new;
-}
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
   Serial.print("Message arrived [");
@@ -172,12 +57,14 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
   String json_str = "";
   for (int i = 0; i < length; i++)
   {
-    Serial.print((char)payload[i]);
+    //Serial.print((char)payload[i]);
     json_str += (char)payload[i];
   }
   Serial.println(json_str);
   Serial.println();
+  StaticJsonBuffer<200> jsonBuffer;
   JsonObject &msg = jsonBuffer.parseObject(json_str);
+  //  Serial.printf(msg));
   if (!msg.success())
   {
     Serial.println("parseObject() failed");
@@ -185,29 +72,57 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
   }
   else
   {
-    Serial.print("ParseObject() Okie, Payload: ");
+    Serial.print("ParseObject() Okie ");
 
   }
   if (msg["id"] == 1)
   {
     if (msg["value"] == "1")
     {
-      stt_bt1 == true;
+      if (stt_bt1 == false) {
+        digitalWrite(Relay_1, HIGH);
+        Serial.println("Bat den 1");
+      } else {
+        Serial.println("Đen 1 dang bat");
+      }
+      stt_bt1 = true;
+
     }
     else
     {
+      if (stt_bt1 == true) {
+        digitalWrite(Relay_1, LOW);
+        Serial.println("Tat den 1");
+      } else {
+        Serial.println("Đèn 1 đang tắt");
+      }
       stt_bt1 = false;
+
     }
   }
   else if (msg["id"] == 2)
   {
-    if (msg["value"] == "0")
+    if (msg["value"] == "1")
     {
-      stt_bt2 == true;
+      if (stt_bt2 == false) {
+        digitalWrite(Relay_2, HIGH);
+        Serial.println("Bat den 2");
+      } else {
+        Serial.println("Đèn 2 đang bat");
+      }
+      stt_bt2 = true;
+
     }
     else
     {
+      if (stt_bt2 == true) {
+        digitalWrite(Relay_2, LOW);
+        Serial.println("Tat den 2");
+      } else {
+        Serial.println("Đèn 2 đang tat");
+      }
       stt_bt2 = false;
+
     }
   }
   else if ((char)payload[0] == '1')
@@ -279,25 +194,25 @@ void Check_reset()
     Serial.println("//============== > RESET MODE < ============//");
     MQTT_STT = false;
 
-    delay(1000);
+    delay(500);
     if (reset_stt_new == 0 && reset_stt_old == 1)
     {
-      delay(1000);
+      delay(500);
       reset_stt_new = digitalRead(ResetPin);
       Serial.println(reset_stt_new);
       if (reset_stt_new == 0 && reset_stt_old == 1)
       {
-        delay(1000);
+        delay(500);
         reset_stt_new = digitalRead(ResetPin);
         Serial.println(reset_stt_new);
         if (reset_stt_new == 0 && reset_stt_old == 1)
         {
-          delay(1000);
+          delay(500);
           reset_stt_new = digitalRead(ResetPin);
           Serial.println(reset_stt_new);
           if (reset_stt_new == 0 && reset_stt_old == 1)
           {
-            delay(1000);
+            delay(500);
             reset_stt_new = digitalRead(ResetPin);
             Serial.println(reset_stt_new);
             if (reset_stt_new == 0 && reset_stt_old == 1)
@@ -306,10 +221,20 @@ void Check_reset()
               reset_stt_old = reset_stt_new;
               Serial.println("//==============< RESET DONE >============//");
               ESP.restart();
+            } else {
+              MQTT_STT = true;
             }
+          } else {
+            MQTT_STT = true;;
           }
+        } else {
+          MQTT_STT = true;;
         }
+      } else {
+        MQTT_STT = true;;
       }
+    } else {
+      MQTT_STT = true;;
     }
   }
 }
@@ -330,26 +255,65 @@ void Check_reset()
 //    }
 //}
 
-void Handler_button1()
-{
-  if (stt_bt1 == false)
-  {
-    stt_bt1 = true;
-  }
-  else
-  {
-    stt_bt1 = false;
+bool State_B1_old = true;
+bool State_B1_new = true;
+bool State_B2_old = true;
+bool State_B2_new = true;
+
+void Handler_button1() {
+  State_B1_new = digitalRead(Button_1);
+
+  if (State_B1_new != State_B1_old) {
+    delay(5);
+    State_B1_new = digitalRead(Button_1);
+    if (State_B1_new != State_B1_old) {
+      if (stt_bt1 == false)
+      {
+        digitalWrite(Relay_1, HIGH);
+        Serial.println("Bat den 1-->Handler_button1() ");
+        stt_bt1 = true;
+      }
+      else
+      {
+        digitalWrite(Relay_1, LOW);
+        Serial.println("Tat den 1---> Handler_button1()");
+        stt_bt1 = false;
+      }
+      State_B1_old = State_B1_new;
+    } else {
+      State_B1_old = State_B1_new;
+    }
+  } else {
+    State_B1_old = State_B1_new;
   }
 }
+
 void Handler_button2()
 {
-  if (stt_bt2 == false)
-  {
-    stt_bt2 = true;
-  }
-  else
-  {
-    stt_bt2 = false;
+  State_B2_new = digitalRead(Button_2);
+
+  if (State_B2_new != State_B2_old) {
+    delay(5);
+    State_B2_new = digitalRead(Button_2);
+    if (State_B2_new != State_B2_old) {
+      if (stt_bt2 == false)
+      {
+        digitalWrite(Relay_2, HIGH);
+        Serial.println("Bat den 2-->Handler_button2() ");
+        stt_bt2 = true;
+      }
+      else
+      {
+        digitalWrite(Relay_2, LOW);
+        Serial.println("Tat den 2---> Handler_button2()");
+        stt_bt2 = false;
+      }
+      State_B2_old = State_B2_new;
+    } else {
+      State_B2_old = State_B2_new;
+    }
+  } else {
+    State_B2_old = State_B2_new;
   }
 }
 void setup()
@@ -357,12 +321,11 @@ void setup()
   Serial.begin(115200);
   pinMode(BUILTIN_LED, OUTPUT); // Initialize the BUILTIN_LED pin as an output
   pinMode(ResetPin, INPUT_PULLUP);
-  
-  //  pinMode(Button_1, INPUT_PULLUP);
-  //  pinMode(Button_2, INPUT_PULLUP);
-  //  attachInterrupt(digitalPinToInterrupt(Button_1), Handler_button1, CHANGE);
-  //  attachInterrupt(digitalPinToInterrupt(Button_2), Handler_button2, CHANGE);
-//  delay(5000);
+  pinMode(Button_1, INPUT_PULLUP);
+  pinMode(Button_2, INPUT_PULLUP);
+  pinMode(Relay_1, OUTPUT);
+  pinMode(Relay_2, OUTPUT);
+
   //   WIFI
   Serial.print("MAC: ");
   Serial.println(WiFi.macAddress());
@@ -394,13 +357,6 @@ void setup()
 
   client.setServer("broker.hivemq.com", 1883);
   client.setCallback(mqttCallback);
-
-  pinMode(Relay_1, OUTPUT);
-  pinMode(Relay_2, OUTPUT);
-
-
-  //String x = EncodeJWT(msg);
-  //Serial.println(x);
 }
 
 void loop()
@@ -414,6 +370,7 @@ void loop()
     client.loop();
   }
   Check_reset(); // Check button RESET
-//  ControlDevice();
+  Handler_button1();
+  Handler_button2();
   yield();
 }
